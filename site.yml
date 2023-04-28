@@ -4,113 +4,36 @@
    become: true
    pre_tasks:
  
-   - name: update repo cache (CentOS)
+   - name: update repository index (CentOS)
      tags: always
      dnf:
        update_cache: yes
-     changed_when: false    
+     changed_when: false
      when: ansible_distribution == "CentOS"
  
-   - name: update repo cache (Ubuntu)
+   - name: update repository index (Ubuntu)
      tags: always
      apt:
        update_cache: yes
      changed_when: false
-     when: ansible_distribution == "Ubuntu"   
-
+     when: ansible_distribution == "Ubuntu"
+ 
  - hosts: all
    become: true
-   tasks:
-
-   - name: add ssk key for simone
-     tags: always
-     authorized_key:
-       user: simone
-       key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKMthvPFs3is+kj2SJkrGgL5TcUIfhB7xn1+oBZ6MZP5 ansible"
-
+   roles:
+     - base
+    
  - hosts: web_servers
    become: true
-   tasks:
-
-     - name: install apache and php for Ubuntu servers
-       tags: apache,apache2,ubuntu
-       apt:
-         name:
-           - apache2
-           - libapache2-mod-php
-         state: latest
-       when: ansible_distribution == "Ubuntu"
-
-     - name: start apache (Ubuntu)
-       tags: apache,apache2,ubuntu
-       service:
-         name: apache2
-         state: started
-         enabled: yes
-       when: ansible_distribution == "Ubuntu"
+   roles:
+     - web_servers
  
-     - name: install apache and php for CentOS servers
-       tags: apache,https,centos
-       dnf:
-         name:
-           - httpd
-           - php
-         state: latest
-       when: ansible_distribution == "CentOS"
-
-     - name: change email address for apache admin
-       tags: apache,apache2,httpd
-       lineinfile: 
-         path: /etc/apache2/apache2.conf
-         regexp: '^ServerAdmin'
-         line: ServerAdmin somebody@somewhere.net
-       when: ansible_distribution == "Ubuntu"
-       register: apache2
-
-     - name: restart apache2 (Ubuntu)
-       tags: apache,apache2,httpd
-       service:
-         name: apache2
-         state: restarted
-       when: apache2.changed
-
-     - name: copy default site web page
-       tags: apache,apache2,httpd
-       copy:
-         src: default-site.html
-         dest: /var/www/html/index.html
-         owner: root
-         group: root
-         mode: '0644'
-
  - hosts: db_servers
    become: true
-   tasks:
-
-     - name: install mariadb package
-       tags: db,mariadb,ubuntu
-       apt:
-         name: mariadb-server
-         state: latest
-       when: ansible_distribution == "Ubuntu"
-
+   roles:
+     - db_servers
+ 
  - hosts: file_servers
    become: true
-   tasks:
-
-     - name: install samba package
-       package:
-         name: samba
-
-     - name: install unzip
-       package:
-         name: unzip
-
-     - name: install terraform
-       unarchive:
-         src: https://releases.hashicorp.com/terraform/1.4.6/terraform_1.4.6_linux_amd64.zip
-         dest: /usr/local/bin
-         remote_src: yes
-         mode: 0755
-         owner: root
-         group: root 
+   roles:
+     - file_servers
