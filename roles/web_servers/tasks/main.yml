@@ -2,43 +2,25 @@
   tags: apache,apache2,ubuntu
   apt:
     name:
-      - apache2
-      - libapache2-mod-php
+      - "{{ apache_package_name }}" 
+      - "{{ php_package_name }}" 
     state: latest
-    when: ansible_distribution == "Ubuntu"
 
 - name: start apache (Ubuntu)
   tags: apache,apache2,ubuntu
   service:
-    name: apache2
+    name: "{{ apache_service }}" 
     state: started
     enabled: yes
-  when: ansible_distribution == "Ubuntu"
-
-- name: install apache and php for CentOS servers
-  tags: apache,https,centos
-  dnf:
-    name:
-      - httpd
-      - php
-    state: latest
-  when: ansible_distribution == "CentOS"
 
 - name: change email address for apache admin
   tags: apache,apache2,httpd
   lineinfile:
     path: /etc/apache2/apache2.conf
     regexp: '^ServerAdmin'
-    line: ServerAdmin somebody@somewhere.net
+    line: ServerAdmin somebody@somewhere.com
   when: ansible_distribution == "Ubuntu"
-  register: apache2
-
-- name: restart apache2 (Ubuntu)
-  tags: apache,apache2,httpd
-  service:
-    name: apache2
-    state: restarted
-  when: apache2.changed
+  notify: restart_apache 
 
 - name: copy default site web page
   tags: apache,apache2,httpd
