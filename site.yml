@@ -4,19 +4,29 @@
    become: true
    pre_tasks:
  
-   - name: install updates (CentOS)
+   - name: update repo cache (CentOS)
      tags: always
      dnf:
-       update_only: yes
        update_cache: yes
+     changed_when: false    
      when: ansible_distribution == "CentOS"
  
-   - name: install updates (Ubuntu)
+   - name: update repo cache (Ubuntu)
      tags: always
      apt:
-       upgrade: dist
        update_cache: yes
+     changed_when: false
      when: ansible_distribution == "Ubuntu"   
+
+ - hosts: all
+   become: true
+   tasks:
+
+   - name: add ssk key for simone
+     tags: always
+     authorized_key:
+       user: simone
+       key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKMthvPFs3is+kj2SJkrGgL5TcUIfhB7xn1+oBZ6MZP5 ansible"
 
  - hosts: web_servers
    become: true
@@ -30,6 +40,14 @@
            - libapache2-mod-php
          state: latest
        when: ansible_distribution == "Ubuntu"
+
+     - name: start apache (Ubuntu)
+       tags: apache,apache2,ubuntu
+       service:
+         name: apache2
+         state: started
+         enabled: yes
+       when: ansible_distribution == "Ubuntu"
  
      - name: install apache and php for CentOS servers
        tags: apache,https,centos
@@ -39,6 +57,22 @@
            - php
          state: latest
        when: ansible_distribution == "CentOS"
+
+     - name: change email address for apache admin
+       tags: apache,apache2,httpd
+       lineinfile: 
+         path: /etc/apache2/apache2.conf
+         regexp: '^ServerAdmin'
+         line: ServerAdmin somebody@somewhere.net
+       when: ansible_distribution == "Ubuntu"
+       register: apache2
+
+     - name: restart apache2 (Ubuntu)
+       tags: apache,apache2,httpd
+       service:
+         name: apache2
+         state: restarted
+       when: apache2.changed
 
      - name: copy default site web page
        tags: apache,apache2,httpd
@@ -65,7 +99,18 @@
    tasks:
 
      - name: install samba package
-       tags: samba
        package:
          name: samba
-         state: latest
+
+     - name: install unzip
+       package:
+         name: unzip
+
+     - name: install terraform
+       unarchive:
+         src: https://releases.hashicorp.com/terraform/1.4.6/terraform_1.4.6_linux_amd64.zip
+         dest: /usr/local/bin
+         remote_src: yes
+         mode: 0755
+         owner: root
+         group: root 
